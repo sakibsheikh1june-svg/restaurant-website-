@@ -1,0 +1,125 @@
+import React, { useState, useEffect } from 'react';
+import { CartProvider, useCart } from './context/CartContext';
+import { Navbar } from './components/Navbar';
+import { Hero } from './components/Hero';
+import { CombosSection } from './components/CombosSection';
+import { MenuSection } from './components/MenuSection';
+import { RestaurantInfo } from './components/RestaurantInfo';
+import { ReviewsSection } from './components/ReviewsSection';
+import { Footer } from './components/Footer';
+import { CartDrawer } from './components/CartDrawer';
+import { CheckoutModal } from './components/CheckoutModal';
+import { OrderTrackingModal } from './components/OrderTrackingModal';
+import { AdminDashboard } from './components/AdminDashboard';
+import { MobileCartBar } from './components/MobileCartBar';
+import { api } from './services/api';
+import { MenuItem, ComboDeal, Order, CustomerReview } from './types';
+import { initialMenuItems, initialCombos, initialReviews } from './data/initialData';
+
+const MainApp: React.FC = () => {
+  const { settings, updateSettingsState } = useCart();
+  
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(initialMenuItems);
+  const [combos, setCombos] = useState<ComboDeal[]>(initialCombos);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [reviews, setReviews] = useState<CustomerReview[]>(initialReviews);
+
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isTrackingOpen, setIsTrackingOpen] = useState(false);
+  const [trackingId, setTrackingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.getMenu().then(setMenuItems).catch(() => {});
+    api.getCombos().then(setCombos).catch(() => {});
+    api.getOrders().then(setOrders).catch(() => {});
+    api.getReviews().then(setReviews).catch(() => {});
+  }, []);
+
+  const handleOrderNow = () => {
+    const el = document.getElementById('menu');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleExploreMenu = () => {
+    const el = document.getElementById('combos');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleOrderSuccess = (orderId: string) => {
+    setTrackingId(orderId);
+    setIsTrackingOpen(true);
+    api.getOrders().then(setOrders).catch(() => {});
+  };
+
+  const handleOpenTrackingModal = () => setIsTrackingOpen(true);
+
+  const handleSearchFocus = () => {
+    const searchInput = document.querySelector('input[placeholder*="Search burgers"]') as HTMLInputElement;
+    if (searchInput) {
+      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      searchInput.focus();
+    } else {
+      handleOrderNow();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0B0B0B] text-white flex flex-col font-sans selection:bg-[#D4AF37] selection:text-black">
+      <Navbar
+        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenTracking={handleOpenTrackingModal}
+        onSearchClick={handleSearchFocus}
+      />
+
+      <main className="flex-1">
+        <Hero
+          onOrderNow={handleOrderNow}
+          onExploreMenu={handleExploreMenu}
+        />
+        <CombosSection combos={combos} />
+        <MenuSection menuItems={menuItems} />
+        <RestaurantInfo />
+        <ReviewsSection
+          reviews={reviews}
+          onReviewAdded={(newRev) => setReviews(prev => [newRev, ...prev])}
+        />
+      </main>
+
+      <Footer
+        onOpenAdmin={() => setIsAdminOpen(true)}
+        onOpenTracking={handleOpenTrackingModal}
+      />
+
+      <MobileCartBar />
+      <CartDrawer />
+      <CheckoutModal onOrderSuccess={handleOrderSuccess} />
+      <OrderTrackingModal
+        isOpen={isTrackingOpen}
+        onClose={() => setIsTrackingOpen(false)}
+        initialOrderId={trackingId}
+      />
+
+      <AdminDashboard
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        menu={menuItems}
+        combos={combos}
+        orders={orders}
+        settings={settings}
+        reviews={reviews}
+        onMenuUpdated={setMenuItems}
+        onCombosUpdated={setCombos}
+        onOrdersUpdated={setOrders}
+        onSettingsUpdated={updateSettingsState}
+      />
+    </div>
+  );
+};
+
+export default function App() {
+  return (
+    <CartProvider>
+      <MainApp />
+    </CartProvider>
+  );
+}

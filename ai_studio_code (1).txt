@@ -1,0 +1,154 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { CartItem, MenuItem, ComboDeal, RestaurantSettings, Order } from '../types';
+import { initialSettings } from '../data/initialData';
+import { api } from '../services/api';
+
+interface CartContextType {
+  cart: CartItem[];
+  addToCart: (item: MenuItem | ComboDeal, isCombo?: boolean, quantity?: number) => void;
+  removeFromCart: (cartItemId: string) => void;
+  updateQuantity: (cartItemId: string, delta: number) => void;
+  clearCart: () => void;
+  subtotal: number;
+  deliveryFee: number;
+  total: number;
+  totalItemsCount: number;
+  freeDeliveryThreshold: number;
+  amountNeededForFreeDelivery: number;
+  isCartOpen: boolean;
+  setIsCartOpen: (open: boolean) => void;
+  isCheckoutOpen: boolean;
+  setIsCheckoutOpen: (open: boolean) => void;
+  trackingOrderId: string | null;
+  setTrackingOrderId: (id: string | null) => void;
+  settings: RestaurantSettings;
+  updateSettingsState: (newSettings: Partial<RestaurantSettings>) => Promise<void>;
+  lastPlacedOrder: Order | null;
+  setLastPlacedOrder: (order: Order | null) => void;
+}
+
+const CartContext = createContext<CartContextType | undefined>(undefined);
+const CART_STORAGE_KEY = 'al_ishra_cart_items';
+
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(CART_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [settings, setSettings] = useState<RestaurantSettings>(initialSettings);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [trackingOrderId, setTrackingOrderId] = useState<string | null>(null);
+  const [lastPlacedOrder, setLastPlacedOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    api.getSettings().then(setSettings).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    } catch (e) {
+      console.error('Failed to save cart to localStorage', e);
+    }
+  }, [cart]);
+
+  const addToCart = (item: MenuItem | ComboDeal, isCombo = false, quantity = 1) => {
+    setCart(prev => {
+      const existingIndex = prev.findIndex(ci => ci.item.id === item.id && ci.isCombo === isCombo);
+      if (existingIndex > -1) {
+        const next = [...prev];
+        next[existingIndex] = {
+          ...next[existingIndex],
+          quantity: next[existingIndex].quantity + quantity
+        };
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          cartItemId: `${item.id}-${isCombo ? 'combo' : 'item'}-${Date.now()}`,
+          item,
+          isCombo,
+          quantity
+        }
+      ];
+    });
+    setIsCartOpen(true);
+  };
+
+  const removeFromCart = (cartItemId: string) => {
+    setCart(prev => prev.filter(ci => ci.cartItemId !== cartItemId));
+  };
+
+  const updateQuantity = (cartItemId: string, delta: number) => {
+    setCart(prev => {
+      return prev
+        .map(ci => {
+          if (ci.cartItemId === cartItemId) {
+            const newQty = ci.quantity + delta;
+            return newQty > 0 ? { ...ci, quantity: newQty } : null;
+          }
+          return ci;
+        })
+        .filter((ci): ci is CartItem => ci !== null);
+    });
+  };
+
+  const clearCart = () => setCart([]);
+
+  const subtotal = cart.reduce((acc, ci) => acc + ci.item.price * ci.quantity, 0);
+  const totalItemsCount = cart.reduce((acc, ci) => acc + ci.quantity, 0);
+
+  const freeDeliveryThreshold = settings.freeDeliveryAbove || 399;
+  const isFreeDelivery = subtotal >= freeDeliveryThreshold;
+  const deliveryFee = subtotal > 0 ? (isFreeDelivery ? 0 : settings.deliveryFee || 40) : 0;
+  const total = subtotal + deliveryFee;
+  const amountNeededForFreeDelivery = Math.max(0, freeDeliveryThreshold - subtotal);
+
+  const updateSettingsState = async (newSettings: Partial<RestaurantSettings>) => {
+    const updated = await api.updateSettings(newSettings);
+    setSettings(updated);
+  };
+
+  return (
+    <CartContext.Provider
+      value={{
+        cart,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        subtotal,
+        deliveryFee,
+        total,
+        totalItemsCount,
+        freeDeliveryThreshold,
+        amountNeededForFreeDelivery,
+        isCartOpen,
+        setIsCartOpen,
+        isCheckoutOpen,
+        setIsCheckoutOpen,
+        trackingOrderId,
+        setTrackingOrderId,
+        settings,
+        updateSettingsState,
+        lastPlacedOrder,
+        setLastPlacedOrder
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  );
+};
+
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) throw new Error('useCart must be used within a CartProvider');
+  return context;
+};
