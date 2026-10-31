@@ -1,0 +1,32 @@
+├── /data
+│   └── restaurant_data.json         # Persistent database (Menu, Combos, Orders, Settings, Reviews)
+├── /src
+│   ├── /components
+│   │   ├── Navbar.tsx               # Luxury gold branding, logo, cart indicator, mobile drawer
+│   │   ├── Hero.tsx                 # Cinematic hero with burger/popcorn/fries visuals & dual CTAs
+│   │   ├── CombosSection.tsx        # Golden promotional combo deals with discount badges
+│   │   ├── MenuSection.tsx          # Categorized menu with veg/non-veg tags, search & qty controls
+│   │   ├── CartDrawer.tsx           # Slide-over cart, free delivery progress meter, live calculations
+│   │   ├── CheckoutModal.tsx        # Online checkout, verified UPI QR code, & WhatsApp order generator
+│   │   ├── OrderTrackingModal.tsx   # Live visual 5-step status tracker with estimated arrival
+│   │   ├── RestaurantInfo.tsx       # Sasaram story, food gallery with lightbox, Google Maps & Instagram
+│   │   ├── ReviewsSection.tsx       # Customer ratings, testimonials, and review submission modal
+│   │   ├── AdminDashboard.tsx       # PIN-secured owner portal (Orders, Menu, Combos, Settings, CSV export)
+│   │   ├── MobileCartBar.tsx        # Fixed bottom floating cart bar optimized for Android
+│   │   └── Footer.tsx               # Brand footer, address, timings, and quick navigation
+│   ├── /context
+│   │   └── CartContext.tsx          # Reactive cart state with persistent localStorage sync
+│   ├── /data
+│   │   └── initialData.ts           # Curated menu items, combos, default settings, and reviews
+│   ├── /services
+│   │   └── api.ts                   # REST API client with graceful local fallback
+│   ├── App.tsx                      # Root application coordinating state & modals
+│   ├── index.css                    # Tailwind CSS v4 styling, gold gradients, and typography
+│   ├── main.tsx                     # React 19 root entry point
+│   └── types.ts                     # TypeScript definitions for items, orders, combos & settings
+├── index.html                       # HTML head with Cinzel & Plus Jakarta Sans fonts and SEO tags
+├── metadata.json                    # AI Studio metadata
+├── package.json                     # Full-stack dependencies and tsx server scripts
+├── server.ts                        # Express backend API & Vite middleware server
+├── tsconfig.json                    # TypeScript compiler configuration
+└── vite.config.ts                   # Vite configuration
